@@ -16,6 +16,8 @@ from . import gitio
 from .models import ChangedFile, ChangedSymbol, ChangeType, DiffResult, FileKind
 
 SYMBOL_KINDS = (FileKind.PYTHON, FileKind.TEST)
+MAX_CHANGED_LINES = 5000  # per file; beyond this only line counts are kept
+MAX_SOURCE_BYTES = 1_000_000  # Python files larger than this aren't AST-parsed
 
 _K8S_KIND_RE = re.compile(
     r"^kind:\s*(Deployment|StatefulSet|DaemonSet|Service|Ingress|ConfigMap|Secret|CronJob|Job)\b",
@@ -212,11 +214,21 @@ def parse_diff(repo, base: str, head: str) -> DiffResult:
 
     files: list[ChangedFile] = []
     symbols: list[ChangedSymbol] = []
+    stats = gitio.numstat(repo, base_sha, head_sha)
     for status, path, old_path in gitio.name_status(repo, base_sha, head_sha):
         src_path = old_path or path
+        n_added, n_removed = stats.get(path, (0, 0))
+        binary = n_added is None
+        # binary files and huge text diffs (lockfiles, data dumps) are counted, never read
+        summarized = not binary and (n_added + n_removed) > MAX_CHANGED_LINES
+        if binary:
+            changed = ChangedFile(path=path, status=status, kind=classify(path), old_path=old_path, binary=True)
+            files.append(changed)
+            continue
+
         old_src = None if status == "A" else gitio.show_file(repo, base_sha, src_path)
         new_src = None if status == "D" else gitio.show_file(repo, head_sha, path)
-        added, removed = gitio.file_diff(repo, base_sha, head_sha, path)
+        added, removed = ([], []) if summarized else gitio.file_diff(repo, base_sha, head_sha, path)
 
         changed = ChangedFile(
             path=path,
@@ -225,8 +237,13 @@ def parse_diff(repo, base: str, head: str) -> DiffResult:
             old_path=old_path,
             added_lines=added,
             removed_lines=removed,
+            summarized=summarized,
+            pure_rename=status == "R" and old_src == new_src,
         )
-        if changed.kind in SYMBOL_KINDS:
+        too_big = max(len(old_src or ""), len(new_src or "")) > MAX_SOURCE_BYTES
+        if changed.kind in SYMBOL_KINDS and too_big:
+            changed.summarized = True  # symbols unknown; the checklist says so
+        elif changed.kind in SYMBOL_KINDS:
             try:
                 symbols.extend(diff_symbols(
                     src_path if status != "A" else None,

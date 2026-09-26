@@ -1,6 +1,7 @@
 import json
 import sys
 import threading
+import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -121,9 +122,32 @@ def test_server_bob_mode_without_key_falls_back(server):
     assert result[0] == "result" and result[1]["runbook"]["status"] == "unavailable"
 
 
-def test_server_bad_branch_reports_error(server):
-    _, _, body = _get(server + "/api/analyze?base=main&head=nope&mode=template")
-    assert _events(body)[-1][0] == "error"
+def _get_status(url):
+    """(status, parsed JSON body) for requests expected to be rejected."""
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read())
+
+
+@pytest.mark.parametrize("query,status,kind", [
+    ("base=main&head=nope&mode=template", 404, "unknown_branch"),
+    ("base=main&head=main&mode=template", 400, "same_branch"),
+    ("base=main&head=pr1/pagination-fix&mode=garbage", 400, "bad_mode"),
+    ("base=&head=pr1/pagination-fix&mode=template", 400, "missing_branch"),
+    ("base=main&head=pr1/pagination-fix&mode=sample", 400, "no_sample"),
+    ("base=pr3/discount-tier&head=main&mode=template", 422, "empty_diff"),
+])
+def test_server_rejects_bad_requests_with_real_status(server, query, status, kind):
+    code, body = _get_status(server + "/api/analyze?" + query)
+    assert (code, body["error"]) == (status, kind)
+    assert body["message"]
+
+
+def test_reversed_range_suggests_swap(server):
+    _, body = _get_status(server + "/api/analyze?base=pr3/discount-tier&head=main&mode=template")
+    assert "swapped" in body["message"]
 
 
 def test_api_sends_cors_headers(server):
@@ -136,9 +160,8 @@ def test_api_sends_cors_headers(server):
 @pytest.mark.parametrize("head", ["--output=/tmp/x", "main;ls", "HEAD~1"])
 def test_only_existing_branches_reach_git(server, head):
     from urllib.parse import quote
-    _, _, body = _get(server + f"/api/analyze?base=main&head={quote(head)}&mode=template")
-    kind, data = _events(body)[-1]
-    assert kind == "error" and "unknown branch" in data["message"]
+    code, body = _get_status(server + f"/api/analyze?base=main&head={quote(head)}&mode=template")
+    assert (code, body["error"]) == (404, "unknown_branch")
 
 
 def test_served_page_uses_same_origin_but_file_keeps_cloud_url(server):
@@ -148,12 +171,55 @@ def test_served_page_uses_same_origin_but_file_keeps_cloud_url(server):
     assert '<meta name="blastradius-api" content="' in (WEB_DIR / "index.html").read_text(encoding="utf-8")
 
 
-def test_one_bob_analysis_at_a_time(demo_repo, monkeypatch):
+def _fake_bob(monkeypatch, reply_file):
     monkeypatch.setenv("BOB_API_KEY", "k")
+    monkeypatch.setattr("blastradius.runbook.backends.BobBackend.generate",
+                        lambda self, prompt: reply_file.read_text(encoding="utf-8"))
+
+
+def test_live_bob_streams_partial_before_result(demo_repo, monkeypatch):
+    _fake_bob(monkeypatch, SAMPLES / "pr3_valid.md")
+    events = []
+    view = Dashboard(demo_repo).analyze("main", "pr3/discount-tier", "bob",
+                                        lambda m: events.append(("stage", m)),
+                                        lambda v: events.append(("partial", v)))
+    kinds = [k for k, _ in events]
+    partial = next(v for k, v in events if k == "partial")
+    assert kinds.index("partial") < max(i for i, k in enumerate(kinds) if k == "stage")  # partial before Bob stages
+    assert partial["runbook_pending"] and partial["stats"]["broken_calls"] == 2
+    assert view["runbook"]["status"] == "validated" and "Bob" in view["timings"]
+
+
+def test_bob_requests_queue_instead_of_failing(demo_repo, monkeypatch):
+    import blastradius.web as web
+    _fake_bob(monkeypatch, SAMPLES / "pr3_valid.md")
     app = Dashboard(demo_repo)
+    stages = []
+
+    def on_stage(msg):
+        stages.append(msg)
+        if msg.startswith("Waiting"):  # the "other" analysis finishes while this one waits
+            app._bob_lock.release()
+
+    app._bob_lock.acquire()
+    view = app.analyze("main", "pr3/discount-tier", "bob", on_stage)
+    assert "Waiting for another Bob analysis to finish" in stages
+    assert view["runbook"]["status"] == "validated"
+
+    monkeypatch.setattr(web, "BOB_QUEUE_TIMEOUT", 0.2)
     app._bob_lock.acquire()
     try:
-        with pytest.raises(RuntimeError, match="Another Bob analysis"):
-            app.analyze("main", "pr1/pagination-fix", "bob", lambda _: None)
+        with pytest.raises(web.RequestError) as err:
+            app.analyze("main", "pr3/discount-tier", "bob", lambda _: None)
+        assert err.value.kind == "bob_busy"
     finally:
         app._bob_lock.release()
+
+
+def test_export_returns_the_requested_analysis(server):
+    _get(server + "/api/analyze?base=main&head=pr3/discount-tier&mode=template")
+    _get(server + "/api/analyze?base=main&head=pr1/pagination-fix&mode=template")  # someone else's later run
+    _, ctype, html = _get(server + "/api/export?base=main&head=pr3/discount-tier&mode=template")
+    assert "text/html" in ctype and '"range": "main...pr3/discount-tier"' in html
+    code, body = _get_status(server + "/api/export?base=main&head=nope&mode=template")
+    assert (code, body["error"]) == (404, "unknown_branch")

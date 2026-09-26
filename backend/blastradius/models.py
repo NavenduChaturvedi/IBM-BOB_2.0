@@ -41,6 +41,9 @@ class ChangedFile:
     added_lines: list[str] = field(default_factory=list)
     removed_lines: list[str] = field(default_factory=list)
     parse_error: str | None = None  # set when a .py file doesn't parse; symbols unknown
+    binary: bool = False
+    summarized: bool = False  # too large for line-level analysis; only counted, not read
+    pure_rename: bool = False  # renamed with identical content
 
 
 @dataclass

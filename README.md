@@ -170,6 +170,8 @@ Supported artifacts: Alembic and Django migrations, Kubernetes Deployments/State
 - **Heuristic call search, not a full call graph.** It resolves imports, aliases, relative imports, and package re-exports, but misses `getattr`, dynamic dispatch, and dependency injection. Instance method calls (`obj.m()`) are reported as low confidence.
 - **Single repo, Python only.** No cross-service tracing.
 - **The runbook is grounded, not guaranteed.** A human should review it before running anything in production. The tool never runs commands itself.
+- **Prompt injection.** A diff is attacker-controllable text, and Bob's prompt includes changed code. A hostile comment could try to steer Bob, but whatever Bob writes still has to pass the validator's allow-list of deployments, revisions, commits and tools found in the repo, so injected commands are rejected rather than shown.
+- **Code leaves your machine in Bob mode.** Changed symbols, call sites and repo facts are sent to Bob's API. Template mode sends nothing anywhere. Don't use Bob mode on private code without a data-handling review.
 
 ## Development
 

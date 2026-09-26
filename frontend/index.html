@@ -47,7 +47,7 @@ code, pre { font-family: var(--mono); }
 a { color: inherit; text-decoration: none; }
 
 /* ─── shell ─── */
-.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
 
 /* ─── sidebar ─── */
 .sidebar {
@@ -106,7 +106,7 @@ main { min-width: 0; padding: 0; display: flex; flex-direction: column; }
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
   padding: 12px 28px;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .topbar .grow { flex: 1; }
 .range-picker {
@@ -116,7 +116,7 @@ main { min-width: 0; padding: 0; display: flex; flex-direction: column; }
   height: 40px;
 }
 .range-picker select {
-  border: none; background: var(--card); border-radius: 999px;
+  border: none; background: var(--card); border-radius: 999px; min-width: 0;
   padding: 4px 10px; font-family: var(--mono); font-size: 12px; max-width: 200px;
   color: var(--ink-2);
 }
@@ -153,6 +153,7 @@ main { min-width: 0; padding: 0; display: flex; flex-direction: column; }
 /* ─── page area ─── */
 .page { flex: 1; padding: 26px 28px 48px; }
 .page-hidden { display: none !important; }
+.hidden { display: none !important; }
 
 /* ─── page header ─── */
 .page-head { margin-bottom: 26px; }
@@ -412,7 +413,51 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
 .welcome p { color: var(--muted); font-size: 13px; max-width: 360px; }
 .welcome .kbd { display: inline-block; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
 
+
+/* ─── banner (persistent inline messages) ─── */
+.banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin: 14px 28px 0; padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--panel); font-size: 13px;
+}
+.banner.hidden { display: none; }
+.banner.error { background: #fff4f2; border-color: #f5c9c0; }
+.banner.warn { background: #fff8ea; border-color: #f3dca7; }
+.banner.info, .banner.wake { background: #f3f6fe; border-color: #d6e0f8; }
+.banner .bn-icon { width: 20px; display: grid; place-items: center; padding-top: 1px; flex: none; }
+.banner.error .bn-icon { color: var(--coral); }
+.banner.warn .bn-icon { color: var(--amber); }
+.banner .bn-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; color: var(--ink-2); }
+.banner .bn-text b { color: var(--ink); font-weight: 600; }
+.banner .bn-text code { font-family: var(--mono); font-size: 12px; background: rgba(17,17,20,.05); padding: 1px 5px; border-radius: 5px; }
+.banner .bn-actions { display: flex; gap: 6px; align-items: center; flex: none; }
+.banner .bn-btn { height: 30px; padding: 0 14px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 600; }
+.banner .bn-close { width: 28px; height: 28px; border-radius: 50%; font-size: 18px; line-height: 1; color: var(--muted); }
+.banner .bn-close:hover { background: rgba(17,17,20,.06); color: var(--ink); }
+.bn-spin { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex: none;
+  border: 2px solid rgba(56,103,214,.25); border-top-color: var(--blue, #3867d6); animation: spin .8s linear infinite; vertical-align: -2px; }
+.bn-spin.big { width: 28px; height: 28px; border-width: 3px; border-color: rgba(229,85,63,.2); border-top-color: var(--coral); }
+.pill.pending { background: #e9effc; color: #3867d6; display: inline-flex; align-items: center; gap: 6px; }
+
+/* ─── scenario loading / error state ─── */
+.scenario-status { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  padding: 70px 20px; color: var(--muted); }
+.scenario-status svg { color: var(--coral); }
+.scenario-status h3 { font-size: 18px; font-weight: 500; color: var(--ink-2); }
+.scenario-status p { max-width: 460px; font-size: 13px; }
+
+/* ─── connecting (cold start) ─── */
+.app.connecting .range-picker, .app.connecting .seg { opacity: .55; }
+.app.connecting #page-welcome h2::after { content: " (connecting…)"; color: var(--muted); font-size: 16px; }
+.err-actions { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+
 /* ─── responsive ─── */
+@media (max-width: 1180px) {
+  .topbar .grow { display: none; }
+  .range-picker { flex: 1 1 300px; min-width: 0; }
+  .range-picker select { flex: 1; max-width: none; }
+  .seg { order: 3; }
+}
 @media (max-width: 1100px) {
   .span-8, .span-7, .span-5, .span-4, .span-3 { grid-column: span 12; }
   .span-6 { grid-column: span 12; }
@@ -428,6 +473,9 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
   .nav a span { display: none; }
   .nav-section, .side-spacer, .side-foot, .bob-pill { display: none; }
   .topbar { padding: 10px 16px; }
+  .seg { flex: 1 1 100%; overflow-x: auto; }
+  .seg button { flex: 1; justify-content: center; white-space: nowrap; }
+  .banner { margin: 12px 16px 0; flex-wrap: wrap; }
   .page { padding: 16px; }
   .tree-grid { grid-template-columns: 1fr; }
 }
@@ -544,6 +592,7 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
         Analyze <svg width="14" height="14"><use href="#i-arrow"/></svg>
       </button>
     </header>
+    <div class="banner hidden" id="banner" role="status" aria-live="polite"></div>
 
     <!-- ── PAGE: Overview ── -->
     <div class="page" id="page-overview">
@@ -553,7 +602,7 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
       </div>
       <div class="stats-row" id="stats-row">
         <div class="stat-cell"><div class="sv" id="sc-calls">—</div><div class="sk">Call sites</div><div class="sd" id="sd-calls">&nbsp;</div></div>
-        <div class="stat-cell"><div class="sv" id="sc-broken">—</div><div class="sk">Calls that will fail</div><div class="sd" id="sd-broken">&nbsp;</div></div>
+        <div class="stat-cell"><div class="sv" id="sc-broken">—</div><div class="sk">Breaking calls</div><div class="sd" id="sd-broken">&nbsp;</div></div>
         <div class="stat-cell"><div class="sv" id="sc-high">—</div><div class="sk">High-risk items</div><div class="sd" id="sd-high">&nbsp;</div></div>
         <div class="stat-cell"><div class="sv" id="sc-steps">—</div><div class="sk">Rollback steps</div><div class="sd" id="sd-steps">&nbsp;</div></div>
       </div>
@@ -589,7 +638,7 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
 
     <!-- ── PAGE: Blast radius ── -->
     <div class="page page-hidden" id="page-blast">
-      <div class="page-head"><h1>Blast radius</h1><p id="blast-sub">Import graph + AST call search, 2 hops</p></div>
+      <div class="page-head"><h1>Blast radius</h1><p id="blast-sub">Import graph + AST call search, 2 hops · heuristic: can miss getattr, dynamic dispatch and dependency injection, so verify before relying on it</p></div>
       <div class="card span-12">
         <div id="tree-area"><div class="empty-state"><div class="es-big">No result yet</div>Run an analysis first.</div></div>
         <div class="importers-note" id="importers-note"></div>
@@ -664,9 +713,10 @@ code.ic, .rt code, .re code, .tree-node code, .sym-card code, .facts-val code {
         <h2 id="err-title">Something went wrong</h2>
         <p id="err-msg">An unexpected error occurred.</p>
         <pre id="err-detail" class="hidden"></pre>
-        <button type="button" class="btn-primary" style="margin-top:8px" onclick="navigate('overview')">
-          ← Back to Overview
-        </button>
+        <div class="err-actions">
+          <button type="button" class="btn-primary hidden" id="err-retry">Try again</button>
+          <button type="button" class="link-btn" onclick="navigate('overview')">← Back to Overview</button>
+        </div>
       </div>
     </div>
 
@@ -698,23 +748,28 @@ const icon = (id, sz = 16) => `<svg width="${sz}" height="${sz}"><use href="#i-$
 const base = p => p.split("/").pop();
 
 // ─── state ───────────────────────────────────────────────────────────────────
+// One "current analysis" drives every page (Overview, Blast radius, Checklist,
+// Runbook), whether it came from Analyze, a scenario, a deep link, or Back.
 const S = {
   meta: null,
-  view: null,          // current live analysis result
-  cache: {},           // scenario key → view
+  current: null,         // { key, base, head, mode, scenario, view }
+  results: {},           // analysis key -> completed view (no refetch on revisit / Back)
   mode: "template",
-  running: false,
   page: "overview",
+  run: null,             // { key, controller } for the in-flight analysis
+  pendingScenario: null, // scenario opened before the server answered
 };
+const keyOf = (base, head, mode) => `${base}...${head}|${mode}`;
+Object.defineProperty(S, "view", { get: () => S.current?.view ?? null });
 
-// ─── toast ───────────────────────────────────────────────────────────────────
+// ─── toast: short confirmations only (errors use the persistent banner) ──────
 let _toastTimer;
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  _toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
 async function copyText(text) {
@@ -722,40 +777,97 @@ async function copyText(text) {
   catch { toast("Copy failed — select and copy manually"); }
 }
 
-// ─── navigation ──────────────────────────────────────────────────────────────
-const PAGES = ["overview","blast","checklist","runbook","pr1","pr2","pr3","rejection","error"];
-const SCENARIO_PAGES = { pr1:"pr1/pagination-fix", pr2:"pr2/refund-status", pr3:"pr3/discount-tier", rejection:"pr3/discount-tier" };
+// ─── banner: inline and persistent until dismissed or replaced ───────────────
+const BANNER_ICON = { error: "alert", warn: "alert", info: "info", wake: "info" };
+function banner(kind, title, msg, actions = []) {
+  const el = $("#banner");
+  el.className = `banner ${kind}`;
+  el.dataset.kind = kind;
+  el.innerHTML = `
+    <div class="bn-icon">${kind === "wake" || kind === "info" ? '<span class="bn-spin"></span>' : icon(BANNER_ICON[kind], 16)}</div>
+    <div class="bn-text"><b>${esc(title)}</b>${msg ? `<span>${inline(msg)}</span>` : ""}</div>
+    <div class="bn-actions">
+      ${actions.map((a, i) => `<button type="button" class="bn-btn" data-i="${i}">${esc(a.label)}</button>`).join("")}
+      ${kind === "wake" ? "" : `<button type="button" class="bn-close" aria-label="Dismiss">×</button>`}
+    </div>`;
+  el.querySelectorAll(".bn-btn").forEach(b => b.addEventListener("click", () => actions[+b.dataset.i].fn()));
+  el.querySelector(".bn-close")?.addEventListener("click", () => clearBanner());
+}
+function clearBanner(onlyKind) {
+  const el = $("#banner");
+  if (onlyKind && el.dataset.kind !== onlyKind) return;
+  el.className = "banner hidden";
+  el.dataset.kind = "";
+  el.innerHTML = "";
+}
 
-function navigate(page, push = true) {
+// ─── navigation + URL (Back/Forward restore page, branches, mode, result) ────
+const PAGES = ["overview","blast","checklist","runbook","pr1","pr2","pr3","rejection","error"];
+const SCENARIOS = {
+  pr1: { head: "pr1/pagination-fix", mode: "template" },
+  pr2: { head: "pr2/refund-status",  mode: "template" },
+  pr3: { head: "pr3/discount-tier",  mode: "template" },
+  rejection: { head: "pr3/discount-tier", mode: "sample" },
+};
+
+function showPage(page) {
   PAGES.forEach(p => document.getElementById("page-" + p).classList.toggle("page-hidden", p !== page));
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page));
   S.page = page;
-  if (push) history.pushState({ page }, "", "?p=" + page);
-  window.scrollTo(0, 0);
-  // trigger scenario load when switching to scenario pages
-  if (SCENARIO_PAGES[page] && !S.cache[page]) runScenario(page);
-  else if (SCENARIO_PAGES[page] && S.cache[page]) renderScenarioPage(page, S.cache[page]);
 }
 
-window.navigate = navigate; // expose for error page button
+function urlState() {
+  const st = { page: S.page };
+  if (S.current) Object.assign(st, { base: S.current.base, head: S.current.head, mode: S.current.mode });
+  return st;
+}
+function writeUrl(push) {
+  const st = urlState();
+  const q = new URLSearchParams();
+  if (st.page !== "overview") q.set("p", st.page);
+  if (st.base) { q.set("base", st.base); q.set("head", st.head); q.set("mode", st.mode); }
+  const apiParam = new URLSearchParams(location.search).get("api");
+  if (apiParam) q.set("api", apiParam);
+  const url = "?" + q.toString();
+  if (push) history.pushState(st, "", url); else history.replaceState(st, "", url);
+}
+
+function navigate(page, { push = true } = {}) {
+  showPage(page);
+  window.scrollTo(0, 0);
+  if (SCENARIOS[page]) openScenario(page);
+  if (push) writeUrl(true);
+}
+window.navigate = navigate; // used by the error page button
 
 document.querySelectorAll("#nav a").forEach(a => {
   a.addEventListener("click", e => { e.preventDefault(); navigate(a.dataset.page); });
 });
 
 window.addEventListener("popstate", e => {
-  if (e.state?.page) navigate(e.state.page, false);
+  const st = e.state || {};
+  showPage(PAGES.includes(st.page) ? st.page : "overview");
+  if (st.base && S.meta) {
+    const cached = S.results[keyOf(st.base, st.head, st.mode)];
+    if (cached) setCurrent(st.base, st.head, st.mode, cached);
+    else syncControls(st.base, st.head, st.mode);
+  }
+  if (SCENARIOS[S.page]) openScenario(S.page);
 });
 
-// ─── progress overlay ─────────────────────────────────────────────────────
-function showOverlay(on, title = "Analyzing") {
-  $("#overlay").classList.toggle("hidden", !on);
-  $("#btn-analyze").disabled = on;
-  S.running = on;
-  if (on) {
-    $("#p-title").textContent = title;
-    $("#stages-list").innerHTML = "";
-  }
+// ─── progress overlay (only until the deterministic result arrives) ──────────
+let _elapsedTimer;
+function showOverlay(title) {
+  $("#overlay").classList.remove("hidden");
+  $("#p-title").textContent = title;
+  $("#stages-list").innerHTML = "";
+  const started = performance.now();
+  clearInterval(_elapsedTimer);
+  _elapsedTimer = setInterval(() => { $("#p-elapsed").textContent = ((performance.now() - started) / 1000).toFixed(1) + "s"; }, 100);
+}
+function hideOverlay() {
+  $("#overlay").classList.add("hidden");
+  clearInterval(_elapsedTimer);
 }
 
 function addStage(msg) {
@@ -769,6 +881,26 @@ function addStage(msg) {
   ul.appendChild(li);
 }
 
+// ─── Bob wait indicator (the page stays usable while Bob works) ─────────────
+let _bobTimer;
+function startBobWait() {
+  const started = performance.now();
+  const tick = () => {
+    const s = Math.round((performance.now() - started) / 1000);
+    if (s < 20) banner("info", `Bob is improving the runbook… ${s}s`,
+      "Blast radius and checklist are final; only the runbook will update.");
+    else banner("info", `Bob is taking longer than usual (${s}s)`,
+      "Everything except the runbook is final, and the deterministic runbook is already shown. Bob's version will replace it if it validates.");
+  };
+  tick();
+  clearInterval(_bobTimer);
+  _bobTimer = setInterval(tick, 1000);
+}
+function stopBobWait() {
+  clearInterval(_bobTimer);
+  clearBanner("info");
+}
+
 // ─── render helpers ──────────────────────────────────────────────────────────
 const SEV_ICON = { high: "alert", med: "info", low: "check" };
 const CHANGE_LABEL = { signature_changed: "sig changed", removed: "removed", body_changed: "body changed", added: "added" };
@@ -776,7 +908,7 @@ const CHANGE_LABEL = { signature_changed: "sig changed", removed: "removed", bod
 function renderChart(v, container) {
   const files = v.by_file;
   if (!files.length) {
-    container.innerHTML = `<div class="empty-state"><div class="es-big">No existing callers affected</div>${v.importers.length ? plural(v.importers.length, "module") + " import the changed code but make no direct calls." : "Nothing else in the repo calls the changed code."}</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="es-big">No existing callers found</div>${v.importers.length ? plural(v.importers.length, "module") + (v.importers.length === 1 ? " imports the changed code but makes" : " import the changed code but make") + " no direct calls. " : ""}${v.symbols.length ? "Either this is dead code or it's called dynamically (getattr, dependency injection). Verify before assuming it's safe." : "No Python code changed in this diff."}</div>`;
     return;
   }
   const max = Math.max(...files.map(f => f.calls));
@@ -851,7 +983,7 @@ function renderChecklist(v, container) {
 
 function renderSymbols(v, container) {
   if (!v.symbols.length) {
-    container.innerHTML = `<div class="empty-state">No Python symbols changed.</div>`; return;
+    container.innerHTML = `<div class="empty-state">No Python functions or classes changed${v.files.length ? `; this diff touches ${plural(v.files.length, "file")} (${esc([...new Set(v.files.map(f => f.kind))].join(", "))})` : ""}.</div>`; return;
   }
   container.innerHTML = v.symbols.map(s => {
     const pct = s.callers ? (s.breaks / s.callers) * 100 : 0;
@@ -862,7 +994,7 @@ function renderSymbols(v, container) {
       </div>
       <div class="sc-meta"><span class="pill ${s.change}">${CHANGE_LABEL[s.change]}</span><span class="sc-where">${esc(s.file)}:${s.line}</span></div>
       ${showBar ? `<div class="progress-bar ${s.breaks ? "" : "ok"}"><i style="width:${s.breaks ? pct : s.callers ? 100 : 0}%"></i></div>
-        <div class="sc-cap">${s.breaks ? `<span class="bad">${s.breaks} of ${s.callers} break</span>` : `<span>${s.callers ? "no breaking calls" : "no callers found"}</span>`}<span>${esc(s.kind)}</span></div>` : ""}
+        <div class="sc-cap">${s.breaks ? `<span class="bad">${s.breaks} of ${s.callers} break</span>` : `<span title="Either dead code or called dynamically; verify before assuming it's safe">${s.callers ? "no breaking calls" : "no callers found (dead code or dynamic?)"}</span>`}<span>${esc(s.kind)}</span></div>` : ""}
       ${s.change === "signature_changed" ? `<div class="sig-diff"><div class="sd-old">${esc(s.old_sig)}</div><div class="sd-new">${esc(s.new_sig)}</div></div>` : ""}
     </div>`;
   }).join("");
@@ -897,7 +1029,7 @@ function treeNode(n) {
 
 function renderTree(v, container, importersEl) {
   if (!v.tree.length) {
-    container.innerHTML = `<div class="empty-state"><div class="es-big">No existing callers affected</div>${v.importers.length ? "Imported by " + v.importers.map(i => `<code>${esc(i.file)}:${i.line}</code>`).join(", ") : "Nothing else in the repo uses the changed code."}</div>`;
+    container.innerHTML = `<div class="empty-state"><div class="es-big">No existing callers found</div>${v.importers.length ? "Imported by " + v.importers.map(i => `<code>${esc(i.file)}:${i.line}</code>`).join(", ") + ". " : ""}${v.symbols.length ? "Either this is dead code or it's called dynamically (getattr, dependency injection). Verify before assuming it's safe." : "No Python code changed in this diff, so there's no code-level blast radius."}</div>`;
     if (importersEl) importersEl.innerHTML = "";
     return;
   }
@@ -906,7 +1038,7 @@ function renderTree(v, container, importersEl) {
       <div class="tree-root-h">
         <span class="tree-sym">${esc(r.symbol)}</span>
         ${r.change ? `<span class="pill ${r.change}">${CHANGE_LABEL[r.change]}</span>` : ""}
-        ${r.breaks ? `<span class="pill hot">${plural(r.breaks, "call")} will fail</span>` : ""}
+        ${r.breaks ? `<span class="pill hot">${plural(r.breaks, "breaking call")}</span>` : ""}
       </div>
       ${r.callers.map(treeNode).join("")}
     </div>`).join("")}</div>`;
@@ -921,11 +1053,15 @@ function renderTree(v, container, importersEl) {
 function renderRunbook(v, rbStatusEl, rbBodyEl, rejectionsEl, subEl) {
   const rb = v.runbook;
   if (rbStatusEl) {
-    rbStatusEl.className = `pill ${rb.status}`;
-    rbStatusEl.textContent = (rb.status === "validated" ? "✓ " : rb.status === "template" ? "" : "⚠ ") + rb.label;
+    rbStatusEl.className = `pill ${v.runbook_pending ? "pending" : rb.status}`;
+    rbStatusEl.innerHTML = v.runbook_pending
+      ? '<span class="bn-spin"></span> Bob is improving this runbook…'
+      : esc((rb.status === "validated" ? "✓ " : rb.status === "template" ? "" : "⚠ ") + rb.label);
   }
   if (subEl) {
-    subEl.textContent = rb.status === "validated"
+    subEl.textContent = v.runbook_pending
+      ? "Deterministic runbook shown now; Bob's version replaces it if every command validates"
+      : rb.status === "validated"
       ? "Written by Bob — every command checked against deployments, revisions, and commits in the repo"
       : "Built from repo facts: deployments, migration revisions, flags, and commit SHAs";
   }
@@ -947,68 +1083,70 @@ function renderRunbook(v, rbStatusEl, rbBodyEl, rejectionsEl, subEl) {
   }
 }
 
-// ─── full view render (live pages) ───────────────────────────────────────────
-function renderLive(v) {
-  S.view = v;
-  const s = v.stats;
+// ─── render the current analysis into every analysis page ────────────────────
+const HEURISTIC_NOTE = "Import graph + AST call search, 2 hops · heuristic: can miss getattr, dynamic dispatch and dependency injection, so verify before relying on it";
 
-  // topbar subtitle
+function renderLive(v) {
+  const s = v.stats;
+  const cur = S.current;
+  const label = cur?.scenario ? ` (scenario ${cur.scenario === "rejection" ? "Bob rejection" : cur.scenario.toUpperCase()})` : "";
+
   $("#ph-title").textContent = "Overview";
-  $("#ph-sub").innerHTML = `Blast radius for <code>${esc(v.range)}</code> · ${plural(v.commits.length, "commit")} · ${plural(s.files_changed, "file")} changed · ${plural(s.files_scanned, "Python file")} scanned`
+  $("#ph-sub").innerHTML = `Blast radius for <code>${esc(v.range)}</code>${esc(label)} · ${plural(v.commits.length, "commit")} · ${plural(s.files_changed, "file")} changed · ${plural(s.files_scanned, "Python file")} scanned`
     + Object.entries(v.timings).map(([k, sec]) => ` · ${esc(k)} ${sec.toFixed(1)}s`).join("");
   document.title = `blastradius · ${v.range}`;
 
-  // stats row
   const setCell = (id, val, bad, desc) => {
     $("#sc-" + id).textContent = val;
     $("#sc-" + id).className = "sv" + (bad ? " bad" : "");
     $("#sd-" + id).textContent = desc;
   };
-  setCell("calls", s.call_sites, false, s.call_sites ? `in ${plural(s.call_files, "file")} · ${s.app_call_sites} in app code` : "no callers affected");
+  setCell("calls", s.call_sites, false, s.call_sites ? `in ${plural(s.call_files, "file")} · ${s.app_call_sites} in app code` : "no callers found");
   setCell("broken", s.broken_calls, s.broken_calls > 0, s.broken_calls ? "don't match the new signature" : "every known call still fits");
   setCell("high", s.high, s.high > 0, `of ${plural(s.checklist, "checklist item")}`);
-  setCell("steps", s.runbook_steps, false, v.runbook.label);
+  setCell("steps", s.runbook_steps, false, v.runbook_pending ? "Bob is improving it…" : v.runbook.label);
 
-  // nav badges
   const clBadge = $("#nav-badge-checklist");
   clBadge.textContent = s.high || ""; clBadge.classList.toggle("hidden", !s.high);
 
-  // overview cards
   renderChart(v, $("#chart-area"));
   renderGauge(v, $("#gauge-area"));
   renderSymbols(v, $("#syms-area"));
   renderFacts(v, $("#facts-area"));
-
-  // hide welcome placeholder
   const w = $("#page-welcome");
   if (w) w.style.display = "none";
 
-  // blast page
   renderTree(v, $("#tree-area"), $("#importers-note"));
-  $("#blast-sub").textContent = `Import graph + AST call search, 2 hops · ${plural(v.stats.call_sites, "call site")} across ${plural(Object.keys(v.by_file || {}).length || v.stats.call_files, "file")}`;
+  $("#blast-sub").textContent = `${v.range} · ${plural(s.call_sites, "call site")} in ${plural(s.call_files, "file")} · ${HEURISTIC_NOTE}`;
 
-  // checklist page
   renderChecklist(v, $("#rows-area"));
   const c = v.risk.counts;
-  $("#checklist-sub").textContent = v.checklist.length ? `${c.high} high · ${c.med} med · ${c.low} low` : "Nothing specific to check";
+  $("#checklist-sub").textContent = `${v.range} · ` + (v.checklist.length ? `${c.high} high · ${c.med} med · ${c.low} low` : "nothing specific to check");
 
-  // runbook page
   renderRunbook(v, $("#rb-status-pill"), $("#rb-body"), $("#rejections-area"), $("#rb-sub"));
   $("#limits-note").textContent = v.limitations;
 }
 
-// ─── scenario page rendering ─────────────────────────────────────────────────
+function renderScenarioStatus(key, title, msg, retry) {
+  const box = $(`#scenario-${key}`);
+  if (!box) return;
+  box.innerHTML = `<div class="scenario-status">
+      ${retry ? icon("alert", 28) : '<span class="bn-spin big"></span>'}
+      <h3>${esc(title)}</h3><p>${inline(msg)}</p>
+      ${retry ? '<button type="button" class="btn-primary" data-retry>Try again</button>' : ""}
+    </div>`;
+  box.querySelector("[data-retry]")?.addEventListener("click", () => openScenario(key, { force: true }));
+}
+
 function renderScenarioPage(key, v) {
   const container = $(`#scenario-${key}`);
   if (!container) return;
-
-  // Build a mini-dashboard in the scenario container
   container.innerHTML = `
     <div class="stats-row" style="margin-bottom:22px">
-      <div class="stat-cell"><div class="sv ${v.stats.broken_calls > 0 ? "bad" : ""}">${v.stats.broken_calls}</div><div class="sk">Breaking calls</div><div class="sd">${v.stats.broken_calls ? "don't fit new signature" : "all callers still fit"}</div></div>
+      <div class="stat-cell"><div class="sv ${v.stats.broken_calls > 0 ? "bad" : ""}">${v.stats.broken_calls}</div><div class="sk">Breaking calls</div><div class="sd">${v.stats.broken_calls ? "don't match the new signature" : "every known call still fits"}</div></div>
       <div class="stat-cell"><div class="sv ${v.stats.high > 0 ? "bad" : "good"}">${v.stats.high}</div><div class="sk">High-risk items</div><div class="sd">of ${plural(v.stats.checklist, "checklist item")}</div></div>
-      <div class="stat-cell"><div class="sv">${v.stats.call_sites}</div><div class="sk">Call sites</div><div class="sd">in ${plural(v.stats.call_files, "file")}</div></div>
-      <div class="stat-cell"><div class="sv">${v.stats.runbook_steps}</div><div class="sk">Rollback steps</div><div class="sd">${v.runbook.label}</div></div>
+      <div class="stat-cell"><div class="sv">${v.stats.call_sites}</div><div class="sk">Call sites</div><div class="sd">${v.stats.call_sites ? `in ${plural(v.stats.call_files, "file")}` : "no callers found"}</div></div>
+      <div class="stat-cell"><div class="sv">${v.stats.runbook_steps}</div><div class="sk">Rollback steps</div><div class="sd">${esc(v.runbook.label)}</div></div>
     </div>
     <div class="board">
       <div class="card span-8" id="sc-chart-${key}"></div>
@@ -1022,18 +1160,16 @@ function renderScenarioPage(key, v) {
         <div class="facts-list" id="sc-facts-${key}"></div>
       </div>
       <div class="card span-12">
-        <div class="card-h"><div><h2>Blast radius</h2><div class="ch-sub">Import graph + AST call search, 2 hops</div></div></div>
+        <div class="card-h"><div><h2>Blast radius</h2><div class="ch-sub">${esc(HEURISTIC_NOTE)}</div></div></div>
         <div id="sc-tree-${key}"></div>
         <div class="importers-note" id="sc-imp-${key}"></div>
       </div>
       <div class="card span-12">
         <div class="rb-header">
           <h2>Rollback runbook</h2>
-          <span class="pill ${v.runbook.status}" id="sc-rbpill-${key}">${(v.runbook.status === "validated" ? "✓ " : v.runbook.status === "template" ? "" : "⚠ ") + esc(v.runbook.label)}</span>
+          <span class="pill" id="sc-rbpill-${key}"></span>
           <div class="grow"></div>
-          <button type="button" class="link-btn" onclick="copyText(window._scViews?.${key}?.runbook?.markdown || '')">
-            ${icon("copy", 13)} Copy markdown
-          </button>
+          <button type="button" class="link-btn" data-copy-md>${icon("copy", 13)} Copy markdown</button>
         </div>
         <div id="sc-rej-${key}"></div>
         <div class="runbook-body" id="sc-rb-${key}"></div>
@@ -1041,87 +1177,181 @@ function renderScenarioPage(key, v) {
       </div>
     </div>`;
 
-  // store for copy
-  window._scViews = window._scViews || {};
-  window._scViews[key] = v;
-
-  // chart header
+  container.querySelector("[data-copy-md]").addEventListener("click", () => copyText(v.runbook.markdown));
   const chartCard = $(`#sc-chart-${key}`);
   chartCard.insertAdjacentHTML("afterbegin", `<div class="card-h"><div><h2>Call sites by file</h2></div><div class="grow"></div><div class="legend"><span><i class="dot coral"></i>Breaking</span><span><i class="dot gray"></i>Unaffected</span></div></div>`);
   renderChart(v, chartCard.appendChild(document.createElement("div")));
-
   renderGauge(v, $(`#sc-gauge-${key}`));
   renderChecklist(v, $(`#sc-rows-${key}`));
   renderFacts(v, $(`#sc-facts-${key}`));
   renderTree(v, $(`#sc-tree-${key}`), $(`#sc-imp-${key}`));
-  renderRunbook(v, null, $(`#sc-rb-${key}`), $(`#sc-rej-${key}`), null);
+  renderRunbook(v, $(`#sc-rbpill-${key}`), $(`#sc-rb-${key}`), $(`#sc-rej-${key}`), null);
 }
 
-// ─── scenario runner ─────────────────────────────────────────────────────────
-const SCENARIO_MODE = { pr1: "template", pr2: "template", pr3: "template", rejection: "sample" };
+// ─── the one place results land ──────────────────────────────────────────────
+function syncControls(base, head, mode) {
+  if (!S.meta) return;
+  $("#sel-base").value = base;
+  $("#sel-head").value = head;
+  refreshSampleButton();
+  setMode(mode);
+}
 
-async function runScenario(key) {
-  if (!S.meta) return;  // meta not loaded yet; will retry after meta loads
-  const head = SCENARIO_PAGES[key];
-  if (!head) return;
-  const mode = SCENARIO_MODE[key];
+function scenarioFor(base, head, mode) {
+  if (!S.meta || base !== S.meta.default_base) return null;
+  return Object.keys(SCENARIOS).find(k => SCENARIOS[k].head === head && SCENARIOS[k].mode === mode) || null;
+}
+
+function setCurrent(base, head, mode, view) {
+  const scenario = scenarioFor(base, head, mode);
+  S.current = { key: keyOf(base, head, mode), base, head, mode, scenario, view };
+  syncControls(base, head, mode);
+  renderLive(view);
+  if (scenario) renderScenarioPage(scenario, view);
+  writeUrl(false);
+}
+
+// ─── request layer: fetch + SSE parsing, typed errors, cancel/dedupe ─────────
+class AppError extends Error {
+  constructor(kind, message) { super(message); this.kind = kind; }
+}
+
+async function streamAnalysis(url, { signal, onStage, onPartial }) {
+  let res;
+  try {
+    res = await fetch(url, { signal, headers: { Accept: "text/event-stream" } });
+  } catch (e) {
+    if (e.name === "AbortError") throw e;
+    throw new AppError("network", "The analysis server didn't respond.");
+  }
+  if (!res.ok) {
+    let body = {};
+    try { body = await res.json(); } catch {}
+    throw new AppError(body.error || `http_${res.status}`, body.message || `The server answered ${res.status}.`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    let chunk;
+    try { chunk = await reader.read(); }
+    catch (e) {
+      if (e.name === "AbortError") throw e;
+      throw new AppError("network", "The connection to the server dropped mid-analysis.");
+    }
+    if (chunk.done) break;
+    buf += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, "\n");
+    let cut;
+    while ((cut = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      let event = "message", data = "";
+      block.split("\n").forEach(line => {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data += line.slice(5).trim();
+      });
+      const payload = data ? JSON.parse(data) : {};
+      if (event === "stage") onStage(payload.message);
+      else if (event === "partial") onPartial(payload);
+      else if (event === "result") return payload;
+      else if (event === "error") throw new AppError(payload.kind || "analysis", payload.message || "Analysis failed.");
+    }
+  }
+  throw new AppError("network", "The connection to the server closed before the analysis finished.");
+}
+
+const REQUEST_ERRORS = new Set(["unknown_branch", "same_branch", "missing_branch", "bad_mode", "no_sample", "empty_diff"]);
+
+function reportError(err, ctx) {
+  const shown = S.current && S.current.key !== keyOf(ctx.base, ctx.head, ctx.mode)
+    ? ` The results on screen are still from the earlier run of \`${S.current.base}...${S.current.head}\`.` : "";
+  const retry = { label: "Retry", fn: () => runAnalysis(ctx.base, ctx.head, ctx.mode) };
+  let title, kind = "error", actions = [retry];
+  if (err.kind === "network") {
+    title = "Can't reach the analysis server";
+    err.message += " It may still be waking up (the free host sleeps when idle) or be offline.";
+  } else if (REQUEST_ERRORS.has(err.kind)) {
+    title = err.kind === "empty_diff" ? "Nothing to analyze for this branch pair" : "This analysis can't run";
+    kind = "warn"; actions = [];
+  } else if (err.kind === "bob_busy") {
+    title = "Bob is busy"; kind = "warn";
+  } else {
+    title = "The analysis failed";
+  }
+  banner(kind, title, err.message + shown, actions);
+  const sc = scenarioFor(ctx.base, ctx.head, ctx.mode);
+  if (sc && !S.results[keyOf(ctx.base, ctx.head, ctx.mode)]) renderScenarioStatus(sc, title, err.message, true);
+}
+
+async function runAnalysis(base, head, mode) {
+  const key = keyOf(base, head, mode);
+  if (S.run?.key === key) return;          // the same analysis is already on its way
+  if (S.run) S.run.controller.abort();     // a newer request replaces an older one
+  const controller = new AbortController();
+  S.run = { key, controller };
+  clearBanner();
+  stopBobWait();
+  showOverlay(`Analyzing ${base}...${head}`);
+  setBusy(true);
+
+  const url = `${API}/api/analyze?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}&mode=${encodeURIComponent(mode)}`;
+  try {
+    const view = await streamAnalysis(url, {
+      signal: controller.signal,
+      onStage: addStage,
+      onPartial: partial => {             // deterministic facts are final: show them, then wait on Bob
+        setCurrent(base, head, mode, partial);
+        hideOverlay();
+        startBobWait();
+      },
+    });
+    S.results[key] = view;
+    if (S.run?.key === key) {
+      setCurrent(base, head, mode, view);
+      if (view.mode === "bob") toast(view.runbook.status === "validated" ? "Bob's runbook passed validation" : "Bob's draft was rejected; deterministic runbook kept");
+    }
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    if (S.run?.key === key) reportError(err, { base, head, mode });
+  } finally {
+    if (S.run?.key === key) {
+      S.run = null;
+      hideOverlay();
+      stopBobWait();
+      setBusy(false);
+    }
+  }
+}
+
+function setBusy(on) {
+  $("#btn-analyze").disabled = on || !S.meta;
+}
+
+// ─── scenarios ───────────────────────────────────────────────────────────────
+function openScenario(key, { force = false } = {}) {
+  const sc = SCENARIOS[key];
+  if (!S.meta) {
+    S.pendingScenario = key;
+    renderScenarioStatus(key, "Waking up the server…", "This scenario runs as soon as the analysis server answers. The first visit after it has been idle takes about 20–60 seconds.");
+    return;
+  }
   const base = S.meta.default_base;
-
-  showOverlay(true, `Loading ${key.toUpperCase()} scenario`);
-  const started = performance.now();
-  const timer = setInterval(() => { $("#p-elapsed").textContent = ((performance.now() - started) / 1000).toFixed(1) + "s"; }, 100);
-  const done = () => { clearInterval(timer); showOverlay(false); };
-
-  const es = new EventSource(`${API}/api/analyze?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}&mode=${mode}`);
-  es.addEventListener("stage", e => addStage(JSON.parse(e.data).message));
-  es.addEventListener("result", e => {
-    es.close(); done();
-    const v = JSON.parse(e.data);
-    S.cache[key] = v;
-    renderScenarioPage(key, v);
-  });
-  es.addEventListener("error", e => {
-    es.close(); done();
-    let msg = "Analysis failed";
-    try { msg = JSON.parse(e.data).message; } catch {}
-    showError("Analysis error", msg);
-  });
+  const cached = S.results[keyOf(base, sc.head, sc.mode)];
+  if (cached && !force) { setCurrent(base, sc.head, sc.mode, cached); return; }
+  if (!$(`#scenario-${key}`).querySelector(".stats-row")) renderScenarioStatus(key, "Running scenario…", `Analyzing \`${base}...${sc.head}\``);
+  runAnalysis(base, sc.head, sc.mode);
 }
 
-// ─── error page ──────────────────────────────────────────────────────────────
-function showError(title, msg, detail) {
-  $("#err-title").textContent = title;
-  $("#err-msg").textContent = msg;
-  const det = $("#err-detail");
-  if (detail) { det.textContent = detail; det.classList.remove("hidden"); }
-  else det.classList.add("hidden");
-  navigate("error");
-}
-
-// ─── live analyze ─────────────────────────────────────────────────────────────
-function analyze() {
-  if (S.running) return;
+// ─── Analyze button ──────────────────────────────────────────────────────────
+function analyzeSelected() {
+  if (!S.meta) return;
   const base = $("#sel-base").value, head = $("#sel-head").value;
-  if (!base || !head || base === head) { toast("Pick two different branches"); return; }
-  showOverlay(true, `Analyzing ${base}…${head}`);
-  const started = performance.now();
-  const timer = setInterval(() => { $("#p-elapsed").textContent = ((performance.now() - started) / 1000).toFixed(1) + "s"; }, 100);
-  const done = () => { clearInterval(timer); showOverlay(false); };
-
-  const es = new EventSource(`${API}/api/analyze?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}&mode=${S.mode}`);
-  es.addEventListener("stage", e => addStage(JSON.parse(e.data).message));
-  es.addEventListener("result", e => {
-    es.close(); done();
-    renderLive(JSON.parse(e.data));
-    navigate("overview");
-    history.replaceState({ page: "overview" }, "", `?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}&mode=${S.mode}`);
-  });
-  es.addEventListener("error", e => {
-    es.close(); done();
-    let msg = "Analysis failed";
-    try { msg = JSON.parse(e.data).message; } catch {}
-    toast(msg);
-  });
+  if (base === head) {
+    banner("warn", "Pick two different branches", `Base and head are both \`${base}\`.`);
+    return;
+  }
+  if (SCENARIOS[S.page] || S.page === "error") navigate("overview");
+  runAnalysis(base, head, S.mode);
 }
 
 // ─── mode selector ────────────────────────────────────────────────────────────
@@ -1132,99 +1362,148 @@ function setMode(mode) {
 document.querySelectorAll("#modes button").forEach(b => {
   b.addEventListener("click", () => { if (!b.disabled) setMode(b.dataset.mode); });
 });
+function refreshSampleButton() {
+  const btn = document.querySelector('#modes [data-mode="sample"]');
+  const ok = !!S.meta && S.meta.samples.includes($("#sel-head").value);
+  btn.classList.toggle("hidden", !ok);
+  if (!ok && S.mode === "sample") setMode("template");
+}
 
-// ─── live init ────────────────────────────────────────────────────────────────
-async function initLive() {
-  let meta;
+// ─── error page (only when the server can't be reached at all) ───────────────
+function showErrorPage(title, msg) {
+  $("#err-title").textContent = title;
+  $("#err-msg").textContent = msg;
+  $("#err-detail").classList.add("hidden");
+  showPage("error");
+}
+
+// ─── cold start: controls wait for the server, with a visible countdown ─────
+function setConnecting(on) {
+  ["#sel-base", "#sel-head", "#btn-export"].forEach(s => { $(s).disabled = on; });
+  document.querySelectorAll("#modes button").forEach(b => { b.disabled = on; });
+  $("#btn-analyze").disabled = on;
+  $("#btn-analyze").firstChild.textContent = on ? "Connecting… " : "Analyze ";
+  document.querySelector(".app").classList.toggle("connecting", on);
+}
+
+async function fetchMeta(timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    meta = await (await fetch(`${API}/api/meta`)).json();
-  } catch (err) {
-    showError("Cannot reach the server", "Make sure you started with: python blastradius.py --serve", err.message);
+    const res = await fetch(`${API}/api/meta`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function connect() {
+  setConnecting(true);
+  $("#bob-sub").textContent = "connecting to server…";
+  const started = performance.now();
+  const wake = setInterval(() => {
+    const s = Math.round((performance.now() - started) / 1000);
+    if (s >= 2) banner("wake", `Waking the server… ${s}s`,
+      "The analysis server sleeps when idle on free hosting; the first load takes about 20–60 seconds. Everything will be ready as soon as it answers.");
+  }, 500);
+  let meta = null;
+  for (let attempt = 0; attempt < 3 && !meta; attempt++) {
+    try { meta = await fetchMeta(75000); }
+    catch { if (attempt < 2) await new Promise(r => setTimeout(r, 2000)); }
+  }
+  clearInterval(wake);
+  clearBanner("wake");
+  if (!meta) {
+    $("#bob-sub").textContent = "server unreachable";
+    $("#btn-analyze").firstChild.textContent = "Offline ";
+    showErrorPage("Can't reach the analysis server",
+      "The blastradius backend didn't answer after several tries. It may be down or redeploying. Try again in a minute.");
+    $("#err-retry").classList.remove("hidden");
     return;
   }
+  onMeta(meta);
+}
+
+function onMeta(meta) {
   S.meta = meta;
+  setConnecting(false);
   const opts = meta.branches.map(b => `<option>${esc(b)}</option>`).join("");
   $("#sel-base").innerHTML = opts; $("#sel-head").innerHTML = opts;
-  const q = new URLSearchParams(location.search);
-  $("#sel-base").value = q.get("base") || meta.default_base;
-  $("#sel-head").value = q.get("head") || meta.default_head;
 
-  // Bob pill
   const bob = meta.bob;
   $("#bob-pill").classList.toggle("off", !bob.configured);
   $("#bob-title").textContent = bob.configured ? `IBM Bob · ${bob.model}` : "IBM Bob";
   $("#bob-sub").textContent = bob.configured ? "API key configured" : "No API key — template only";
-  document.querySelector('#modes [data-mode="bob"]').disabled = !bob.configured;
+  const bobBtn = document.querySelector('#modes [data-mode="bob"]');
+  bobBtn.disabled = !bob.configured;
+  bobBtn.title = bob.configured ? "Bob improves the runbook; every command is validated" : "Bob's API key isn't configured on the server";
 
-  // sample mode button visibility
-  const sampleBtn = document.querySelector('#modes [data-mode="sample"]');
-  function refreshSample() {
-    const ok = meta.samples.includes($("#sel-head").value);
-    sampleBtn.classList.toggle("hidden", !ok);
-    if (!ok && S.mode === "sample") setMode("template");
+  // deep link: only accept branches that exist, and say so when the link asked for one that doesn't
+  const q = new URLSearchParams(location.search);
+  let base = q.get("base"), head = q.get("head"), mode = q.get("mode") || "template";
+  const bad = [base, head].filter(b => b && !meta.branches.includes(b));
+  if (bad.length) {
+    banner("warn", "That link points at a branch that doesn't exist",
+      `No branch named ${bad.map(b => `\`${b}\``).join(" or ")} here. Showing the default branches instead.`);
+    base = head = null;
   }
-  $("#sel-head").addEventListener("change", refreshSample);
-  refreshSample();
+  if (!["template", "bob", "sample"].includes(mode) || (mode === "bob" && !bob.configured)) mode = "template";
+  syncControls(base || meta.default_base, head || meta.default_head, mode);
+  $("#sel-head").addEventListener("change", refreshSampleButton);
 
-  // set mode from URL
-  const urlMode = q.get("mode");
-  if (urlMode && (urlMode !== "bob" || bob.configured)) setMode(urlMode);
+  const page = q.get("p");
+  if (base && head && base !== head) {
+    if (!SCENARIOS[page]) showPage(PAGES.includes(page) && page !== "error" ? page : "overview");
+    runAnalysis(base, head, mode);
+  }
+  const target = S.pendingScenario || (SCENARIOS[page] ? page : null);
+  S.pendingScenario = null;
+  if (target) { showPage(target); openScenario(target); }
+  else if (!(base && head) && page && PAGES.includes(page) && page !== "error") showPage(page);
+  writeUrl(false);
+}
 
-  // wire buttons
-  $("#btn-analyze").addEventListener("click", analyze);
+function initLive() {
+  $("#btn-analyze").addEventListener("click", analyzeSelected);
   $("#btn-export").addEventListener("click", () => {
-    if (S.view) location.href = `${API}/api/export`;
-    else toast("Run an analysis first");
+    if (!S.current) { toast("Run an analysis first"); return; }
+    const c = S.current;
+    location.href = `${API}/api/export?base=${encodeURIComponent(c.base)}&head=${encodeURIComponent(c.head)}&mode=${encodeURIComponent(c.mode)}`;
   });
-
-  // copy runbook button
   $("#btn-copy-md").addEventListener("click", () => S.view && copyText(S.view.runbook.markdown));
-
-  // if URL has base+head, auto-run
-  if (q.get("base") && q.get("head")) {
-    analyze();
-  } else {
-    // check if a scenario page is requested
-    const p = q.get("p");
-    if (p && PAGES.includes(p)) navigate(p, false);
-  }
-
-  // If we're on a scenario page and meta just loaded, kick it off
-  if (SCENARIO_PAGES[S.page] && !S.cache[S.page]) runScenario(S.page);
+  $("#err-retry").addEventListener("click", () => { $("#err-retry").classList.add("hidden"); showPage("overview"); connect(); });
+  const q = new URLSearchParams(location.search);
+  const page = q.get("p");
+  showPage(PAGES.includes(page) && page !== "error" ? page : "overview");
+  if (SCENARIOS[S.page]) openScenario(S.page);   // shows the waking state; runs once connected
+  connect();
 }
 
 // ─── static export mode ───────────────────────────────────────────────────────
 function initStatic(v) {
-  // hide live controls
   ["#range-live", "#modes", "#btn-analyze", "#btn-export"].forEach(s => $(s)?.classList.add("hidden"));
-  // hide scenario nav links (they won't work offline)
-  document.querySelectorAll("#nav a[data-page^='pr'], #nav a[data-page='rejection']").forEach(a => a.style.display = "none");
-
+  document.querySelectorAll("#nav a[data-page^='pr'], #nav a[data-page='rejection'], #nav .nav-section:nth-of-type(2)")
+    .forEach(a => a.style.display = "none");
   const bob = v.runbook.status;
   $("#bob-pill").classList.toggle("off", bob !== "validated");
   $("#bob-title").textContent = "IBM Bob";
   $("#bob-sub").textContent = bob === "validated" ? "Runbook validated against repo" : "Deterministic template runbook";
-
-  document.title = `blastradius · ${v.range}`;
+  S.current = { key: "static", base: v.base, head: v.head, mode: v.mode || "template", scenario: null, view: v };
   renderLive(v);
-  navigate("overview", false);
-
-  // bind copy md
+  showPage("overview");
   $("#btn-copy-md").addEventListener("click", () => copyText(v.runbook.markdown));
 }
 
 // ─── keyboard shortcut ───────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !document.getElementById("report-data")) analyze();
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !document.getElementById("report-data")) analyzeSelected();
 });
 
 // ─── boot ─────────────────────────────────────────────────────────────────────
 const staticEl = document.getElementById("report-data");
-if (staticEl) {
-  initStatic(JSON.parse(staticEl.textContent));
-} else {
-  initLive().catch(err => showError("Initialization error", "Could not connect to the blastradius server.", err.message));
-}
+if (staticEl) initStatic(JSON.parse(staticEl.textContent));
+else initLive();
 
 })();
 </script>

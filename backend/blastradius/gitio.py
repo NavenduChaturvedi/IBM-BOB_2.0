@@ -59,6 +59,23 @@ def name_status(repo: Path, base: str, head: str) -> list[tuple[str, str, str | 
     return result
 
 
+def numstat(repo: Path, base: str, head: str) -> dict[str, tuple[int | None, int | None]]:
+    """path (new path for renames) -> (added, removed) line counts; (None, None) for binary files."""
+    out = git(repo, "diff", "--numstat", "-z", "-M", f"{base}...{head}")
+    fields = out.split("\0")
+    result: dict[str, tuple[int | None, int | None]] = {}
+    i = 0
+    while i < len(fields) and fields[i]:
+        added, removed, path = fields[i].split("\t", 2)
+        if path == "":  # rename: old and new paths follow as separate fields
+            path = fields[i + 2]
+            i += 3
+        else:
+            i += 1
+        result[path] = (None, None) if added == "-" else (int(added), int(removed))
+    return result
+
+
 def file_diff(repo: Path, base: str, head: str, path: str) -> tuple[list[str], list[str]]:
     """Return (added_lines, removed_lines) for one file, without the +/- prefix."""
     out = git(repo, "diff", "-U0", f"{base}...{head}", "--", path)

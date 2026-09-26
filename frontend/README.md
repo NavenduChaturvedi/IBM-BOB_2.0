@@ -18,6 +18,20 @@ page calls the backend named in that tag, currently the Render deployment at
 `https://blastradius-eqlp.onrender.com`. Append `?api=http://127.0.0.1:8765` to point
 it at a local backend instead.
 
+## Browser checks
+
+`e2e.mjs` drives headless Chrome (Node 22+, no npm packages) through the flows
+that matter on stage: cold start, scenario → sidebar consistency, persistent
+errors, reversed/unknown branches, Back button, the ~894px layout, and an
+unreachable server. It starts the backend itself behind a proxy that delays
+`/api/meta` to simulate a Render cold start.
+
+```bash
+node frontend/e2e.mjs              # deterministic, no Bob calls
+node frontend/e2e.mjs --with-bob   # plus one live Bob run
+SHOTS=shots node frontend/e2e.mjs  # also save screenshots of key states
+```
+
 ## Static export
 
 The backend can also embed the analysis result directly into `index.html` and

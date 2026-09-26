@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast
 from typing import Callable
 
-from .diff_parser import classify
+from .diff_parser import MAX_CHANGED_LINES, classify
 from .models import (BlastRadius, CallShape, Caller, ChangedSymbol, ChangeType, ChecklistItem, DiffResult,
                      FileKind, RollbackFacts, Severity)
 
@@ -293,9 +293,10 @@ def feature_flags(diff, blast, facts):
 
 @rule
 def no_tests(diff, blast, facts):
+    moved_only = {f.path for f in diff.files if f.pure_rename}  # a pure move adds no logic to test
     logic = sorted({s.file for s in diff.symbols
                     if s.kind in ("function", "method") and s.change != ChangeType.REMOVED
-                    and not _is_test(s.file)})
+                    and not _is_test(s.file) and s.file not in moved_only})
     if not logic or any(f.kind == FileKind.TEST for f in diff.files):
         return []
     return [ChecklistItem(
@@ -343,6 +344,28 @@ def parse_errors(diff, blast, facts):
                       f"{f.path} does not parse at head ({f.parse_error}) — blast radius for it is unknown.", [f.path])
         for f in diff.files if f.parse_error
     ]
+
+
+@rule
+def summarized_files(diff, blast, facts):
+    items = []
+    code = [f.path for f in diff.files if f.summarized and f.kind in (FileKind.PYTHON, FileKind.TEST)]
+    other = [f.path for f in diff.files if f.summarized and f.path not in code]
+    if code:
+        items.append(ChecklistItem(
+            "TOO_LARGE_TO_ANALYZE", Severity.MED,
+            f"{_listing(code)} {'is' if len(code) == 1 else 'are'} too large to analyze — changed functions "
+            f"and their callers are unknown. Review these by hand.",
+            code,
+        ))
+    if other:
+        items.append(ChecklistItem(
+            "LARGE_DIFF", Severity.LOW,
+            f"Line-level checks (env vars, dependencies) skipped for {_listing(other)}: "
+            f"more than {MAX_CHANGED_LINES} changed lines.",
+            other,
+        ))
+    return items
 
 
 def build_checklist(diff: DiffResult, blast: BlastRadius, facts: RollbackFacts) -> list[ChecklistItem]:

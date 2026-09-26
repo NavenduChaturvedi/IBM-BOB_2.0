@@ -18,6 +18,8 @@ MAX_FANOUT = 50  # max hop-1 callers expanded into hop-2 searches
 
 def _targets(diff: DiffResult) -> list[Target]:
     kinds = {f.path: f.kind for f in diff.files}
+    # symbols removed by a rename/move carry the old path; their importers are exactly what breaks
+    kinds.update({f.old_path: f.kind for f in diff.files if f.old_path})
     seen: dict[str, Target] = {}
     for s in diff.symbols:
         if s.change == ChangeType.ADDED or kinds.get(s.file) != FileKind.PYTHON:
