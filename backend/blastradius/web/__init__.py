@@ -21,9 +21,11 @@ from .. import gitio
 from ..runbook.backends import BobBackend, FileBackend, LLMError
 from ..viewmodel import build_view
 
-WEB_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = WEB_DIR.parent.parent
-SAMPLES_DIR = PROJECT_ROOT / "demo" / "bob_samples"
+# backend/blastradius/web/  →  go up 4 levels to repo root, then into frontend/
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent  # …/backend
+PROJECT_ROOT = _BACKEND_ROOT.parent                            # repo root
+WEB_DIR = PROJECT_ROOT / "frontend"
+SAMPLES_DIR = _BACKEND_ROOT / "demo" / "bob_samples"
 
 
 def export_html(view: dict) -> str:

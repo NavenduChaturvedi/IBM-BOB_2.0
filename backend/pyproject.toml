@@ -17,8 +17,5 @@ blastradius = "blastradius.cli:main"
 [tool.setuptools.packages.find]
 include = ["blastradius*"]
 
-[tool.setuptools.package-data]
-blastradius = ["web/*.html"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,7 +5,7 @@
 Give it a git range. It traces every call site the change actually touches, builds a pre-flight checklist specific to *this* diff, and writes a rollback runbook using the real deployment names, migration revisions, and commit SHAs from your repo. IBM Bob improves the runbook, and a validator rejects anything Bob says that isn't grounded in the repo.
 
 ```
-python blastradius.py --repo demo_repo --diff main...pr3/discount-tier
+python backend/main.py --repo demo_repo --diff main...pr3/discount-tier
 ```
 
 ![blastradius on a breaking signature change: the caller tree marks the two test calls that will fail, and Bob's runbook is validated against the repo](docs/pr3.svg)
@@ -28,15 +28,15 @@ Requires Python 3.11+ and git.
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python -m pip install -e ".[dev]"     # macOS/Linux: .venv/bin/python
+.venv/Scripts/python -m pip install -e "backend/[dev]"   # macOS/Linux: .venv/bin/python
 
-python demo/seed_demo.py --force                     # builds demo_repo/ with 3 example PRs
-python blastradius.py --repo demo_repo --diff main...pr3/discount-tier --no-llm
+python backend/demo/seed_demo.py --force                  # builds demo_repo/ with 3 example PRs
+python backend/main.py --repo demo_repo --diff main...pr3/discount-tier --no-llm
 ```
 
 ## The three demo PRs
 
-`demo/seed_demo.py` builds a small payments service (Alembic, Kubernetes manifest, GitHub Actions deploy) with a fixed git history. The SHAs are identical on every machine.
+`backend/demo/seed_demo.py` builds a small payments service (Alembic, Kubernetes manifest, GitHub Actions deploy) with a fixed git history. The SHAs are identical on every machine.
 
 | Branch | Change | What the tool reports |
 |---|---|---|
@@ -46,20 +46,20 @@ python blastradius.py --repo demo_repo --diff main...pr3/discount-tier --no-llm
 
 ### Presenting
 
-`demo/present.py` plays the three scenarios with a title card and a pause before each:
+`backend/demo/present.py` plays the three scenarios with a title card and a pause before each:
 
 ```bash
-python demo/present.py                    # live Bob
-python demo/present.py --no-llm           # no network needed
-python demo/present.py --only pr3         # just the centerpiece
-python demo/present.py --rejection        # PR 3 with a hallucinated Bob draft, to show the validator
+python backend/demo/present.py                    # live Bob
+python backend/demo/present.py --no-llm           # no network needed
+python backend/demo/present.py --only pr3         # just the centerpiece
+python backend/demo/present.py --rejection        # PR 3 with a hallucinated Bob draft
 
 # stage-safe: record live Bob drafts, review them, then replay them exactly
-python demo/present.py --save-drafts demo/bob_drafts
-python demo/present.py --replay demo/bob_drafts
+python backend/demo/present.py --save-drafts backend/demo/bob_drafts
+python backend/demo/present.py --replay backend/demo/bob_drafts
 ```
 
-A spinner names each stage as it runs ("Tracing callers…", "Asking Bob…", "Validating Bob's draft…"), so the split between the fixed analysis and Bob is visible live. Regenerate the screenshots with `python demo/present.py --svg docs`.
+A spinner names each stage as it runs ("Tracing callers…", "Asking Bob…", "Validating Bob's draft…"), so the split between the fixed analysis and Bob is visible live. Regenerate the screenshots with `python backend/demo/present.py --svg docs`.
 
 ## How it works
 
@@ -89,8 +89,8 @@ Markdown report
 - **Every command Bob writes is validated** against the facts scanned from the repo. Unknown deployment or namespace, unknown SHA or revision, a tool with no backing file (`helm` without a chart, `curl` to an invented URL), invented HTTP routes, `<placeholders>`, and dropped critical steps are all rejected. The report then uses the template and lists why:
 
 ```bash
-python blastradius.py --repo demo_repo --diff main...pr3/discount-tier \
-    --bob-output demo/bob_samples/pr3_hallucinated.md
+python backend/main.py --repo demo_repo --diff main...pr3/discount-tier \
+    --bob-output backend/demo/bob_samples/pr3_hallucinated.md
 ```
 
 ```
@@ -102,12 +102,12 @@ Why the Bob draft was not used
 - missing step: `kubectl rollout undo deployment/api`
 ```
 
-(`demo/bob_samples/` holds hand-written examples of a good and a bad LLM draft. They're used for offline rehearsal and tests, not actual Bob output.)
+(`backend/demo/bob_samples/` holds hand-written examples of a good and a bad LLM draft. They're used for offline rehearsal and tests, not actual Bob output.)
 
 ## CLI
 
 ```
-python blastradius.py --diff BASE...HEAD [options]
+python backend/main.py --diff BASE...HEAD [options]
 
   --repo PATH          target repo (default: cwd)
   --out FILE           write markdown to a file instead of the terminal
@@ -135,7 +135,7 @@ Everything else has defaults (see `.env.example`): `BOB_API_URL` (`https://api.u
 Check connectivity with:
 
 ```bash
-python blastradius.py --bob-check     # lists available models and sends a test prompt
+python backend/main.py --bob-check     # lists available models and sends a test prompt
 ```
 
 If the key is missing, or the call fails or times out, the tool prints a warning and uses the template runbook. A report is always produced.
@@ -166,25 +166,44 @@ Supported artifacts: Alembic and Django migrations, Kubernetes Deployments/State
 ## Development
 
 ```bash
-.venv/Scripts/python -m pytest              # 137 tests, ~50s; never touches .env or the network
-UPDATE_GOLDEN=1 .venv/Scripts/python -m pytest tests/test_report.py   # accept intended report changes
+cd backend
+../.venv/Scripts/python -m pytest                          # 146 tests, ~55s
+UPDATE_GOLDEN=1 ../.venv/Scripts/python -m pytest tests/test_report.py   # accept report changes
 ```
 
-`tests/golden/` holds the full expected report for each demo PR. Because the demo SHAs are deterministic, these are byte-for-byte comparisons.
+`backend/tests/golden/` holds the full expected report for each demo PR. Because the demo SHAs are deterministic, these are byte-for-byte comparisons.
+
+## Repository layout
 
 ```
-blastradius/
-  cli.py             entry point, output
-  gitio.py           git plumbing (reads the head revision, never the working tree)
-  diff_parser.py     AST diff of changed symbols, file classification
-  import_graph.py    repo-wide import graph
-  callers.py         alias-aware call-site search
-  blast_radius.py    hop-1/hop-2 orchestration
-  artifacts.py       migrations, k8s, compose, env vars, flags → RollbackFacts
-  checklist.py       rules
-  runbook/           template, Bob prompt + backends, validator
-  report.py          markdown / json (files, PR descriptions)
-  terminal.py        rich terminal view (caller tree, severity badges)
-demo/seed_demo.py    reproducible demo repo
-demo/present.py      stage runner, SVG export
+IBM-BOB_2.0/
+├── backend/
+│   ├── blastradius/          # Python package
+│   │   ├── cli.py            # entry point, orchestration, exit codes
+│   │   ├── gitio.py          # git plumbing
+│   │   ├── diff_parser.py    # AST diff of changed symbols
+│   │   ├── import_graph.py   # repo-wide import graph
+│   │   ├── callers.py        # alias-aware call-site search
+│   │   ├── blast_radius.py   # hop-1 / hop-2 orchestration
+│   │   ├── artifacts.py      # migrations, k8s, env vars, flags → RollbackFacts
+│   │   ├── checklist.py      # pre-flight rule registry
+│   │   ├── report.py         # markdown / JSON output
+│   │   ├── terminal.py       # rich terminal view
+│   │   ├── viewmodel.py      # JSON view model for the web dashboard
+│   │   ├── runbook/          # template, Bob prompt + backends, validator
+│   │   └── web/              # HTTP server (serves frontend/index.html)
+│   ├── demo/
+│   │   ├── seed_demo.py      # builds demo_repo/ with 3 PR branches
+│   │   ├── present.py        # stage runner, SVG export
+│   │   └── bob_samples/      # hand-written good / bad Bob drafts
+│   ├── tests/                # pytest suite (146 tests)
+│   ├── main.py               # entry shim: python backend/main.py --diff ...
+│   └── pyproject.toml
+├── frontend/
+│   └── index.html            # self-contained web dashboard (no build step)
+├── docs/                     # screenshots and SVGs
+├── .env.example
+├── .gitignore
+├── PLAN.md
+└── README.md
 ```
