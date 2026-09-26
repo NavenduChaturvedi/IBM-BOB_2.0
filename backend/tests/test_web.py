@@ -124,3 +124,36 @@ def test_server_bob_mode_without_key_falls_back(server):
 def test_server_bad_branch_reports_error(server):
     _, _, body = _get(server + "/api/analyze?base=main&head=nope&mode=template")
     assert _events(body)[-1][0] == "error"
+
+
+def test_api_sends_cors_headers(server):
+    with urllib.request.urlopen(server + "/api/meta", timeout=30) as r:
+        assert r.headers.get("Access-Control-Allow-Origin") == "*"
+    with urllib.request.urlopen(server + "/api/analyze?base=main&head=pr1/pagination-fix&mode=template", timeout=30) as r:
+        assert r.headers.get("Access-Control-Allow-Origin") == "*"
+
+
+@pytest.mark.parametrize("head", ["--output=/tmp/x", "main;ls", "HEAD~1"])
+def test_only_existing_branches_reach_git(server, head):
+    from urllib.parse import quote
+    _, _, body = _get(server + f"/api/analyze?base=main&head={quote(head)}&mode=template")
+    kind, data = _events(body)[-1]
+    assert kind == "error" and "unknown branch" in data["message"]
+
+
+def test_served_page_uses_same_origin_but_file_keeps_cloud_url(server):
+    from blastradius.web import WEB_DIR
+    served = _get(server + "/")[2]
+    assert '<meta name="blastradius-api" content="">' in served
+    assert '<meta name="blastradius-api" content="' in (WEB_DIR / "index.html").read_text(encoding="utf-8")
+
+
+def test_one_bob_analysis_at_a_time(demo_repo, monkeypatch):
+    monkeypatch.setenv("BOB_API_KEY", "k")
+    app = Dashboard(demo_repo)
+    app._bob_lock.acquire()
+    try:
+        with pytest.raises(RuntimeError, match="Another Bob analysis"):
+            app.analyze("main", "pr1/pagination-fix", "bob", lambda _: None)
+    finally:
+        app._bob_lock.release()

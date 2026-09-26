@@ -6,10 +6,16 @@ Stdlib only, bound to 127.0.0.1, works offline (no CDN assets).
   GET /api/analyze?base=&head=&mode=template|bob|sample
                            Server-Sent Events: `stage` events while running, then `result` (or `error`)
   GET /api/export          the last result as a self-contained HTML file
+
+The /api routes send CORS headers, so the frontend can also be hosted on its own
+(file://, GitHub Pages) and point at a deployed backend via its blastradius-api meta tag.
+Only existing branch names are accepted, and only one live Bob analysis runs at a time,
+because a public deployment spends the operator's Bob API key.
 """
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 import webbrowser
@@ -26,6 +32,15 @@ _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent  # …/backend
 PROJECT_ROOT = _BACKEND_ROOT.parent                            # repo root
 WEB_DIR = PROJECT_ROOT / "frontend"
 SAMPLES_DIR = _BACKEND_ROOT / "demo" / "bob_samples"
+
+
+_API_META_RE = re.compile(r'(<meta name="blastradius-api" content=")[^"]*(")')
+
+
+def page_html() -> bytes:
+    """index.html as served by this backend: API calls go to this same origin."""
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    return _API_META_RE.sub(r"\1\2", html).encode("utf-8")
 
 
 def export_html(view: dict) -> str:
@@ -50,6 +65,7 @@ class Dashboard:
     def __init__(self, repo: Path):
         self.repo = repo
         self.last_view: dict | None = None
+        self._bob_lock = threading.Lock()
 
     def branches(self) -> list[str]:
         out = gitio.git(self.repo, "for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads")
@@ -80,15 +96,30 @@ class Dashboard:
     def analyze(self, base: str, head: str, mode: str, on_stage) -> dict:
         from ..cli import analyze  # late import: cli imports this package for --serve
 
+        # only real branch names reach git: a value like "--output=x" would otherwise be read as an option
+        branches = set(self.branches())
+        for name in (base, head):
+            if name not in branches:
+                raise ValueError(f"unknown branch {name!r}")
+
         backend = None
+        locked = False
         if mode == "bob":
             try:
                 backend = BobBackend.from_env()
             except LLMError as e:
                 backend = _Unavailable(str(e))
+            if isinstance(backend, BobBackend):
+                locked = self._bob_lock.acquire(blocking=False)
+                if not locked:
+                    raise RuntimeError("Another Bob analysis is running; try again in a few seconds")
         elif mode == "sample" and (sample := self.sample_for(head)):
             backend = FileBackend(str(sample))
-        report, timings = analyze(self.repo, f"{base}...{head}", backend=backend, on_stage=on_stage)
+        try:
+            report, timings = analyze(self.repo, f"{base}...{head}", backend=backend, on_stage=on_stage)
+        finally:
+            if locked:
+                self._bob_lock.release()
         view = build_view(report, timings)
         view["mode"] = mode
         self.last_view = view
@@ -105,6 +136,7 @@ def _handler(app: Dashboard):
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
             for k, v in (extra or {}).items():
                 self.send_header(k, v)
             self.end_headers()
@@ -118,7 +150,7 @@ def _handler(app: Dashboard):
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
             try:
                 if url.path in ("/", "/index.html"):
-                    self._send(200, (WEB_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
+                    self._send(200, page_html(), "text/html; charset=utf-8")
                 elif url.path == "/api/meta":
                     self._json(app.meta())
                 elif url.path == "/api/analyze":
@@ -139,6 +171,8 @@ def _handler(app: Dashboard):
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("X-Accel-Buffering", "no")  # stream through proxies instead of buffering
             self.send_header("Connection", "close")
             self.end_headers()
 
@@ -149,7 +183,7 @@ def _handler(app: Dashboard):
             try:
                 view = app.analyze(base, head, mode, lambda msg: event("stage", {"message": msg}))
                 event("result", view)
-            except gitio.GitError as e:
+            except (gitio.GitError, ValueError, RuntimeError) as e:
                 event("error", {"message": str(e)})
             except Exception as e:  # surface anything else in the UI rather than a dead spinner
                 event("error", {"message": f"{type(e).__name__}: {e}"})

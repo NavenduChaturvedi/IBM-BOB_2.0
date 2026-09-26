@@ -1,0 +1,18 @@
+# Render Blueprint for the blastradius dashboard backend.
+# The build seeds the demo repo (3 PR branches) that the dashboard analyzes.
+# BOB_API_KEY is set in the Render dashboard (never committed); without it the
+# dashboard still serves template runbooks and the rejection demo.
+services:
+  - type: web
+    name: blastradius
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r backend/requirements.txt && python backend/demo/seed_demo.py --force
+    startCommand: python backend/main.py --repo backend/demo_repo --serve --no-browser
+    healthCheckPath: /api/meta
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: BOB_API_KEY
+        sync: false
