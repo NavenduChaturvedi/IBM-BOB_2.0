@@ -10,13 +10,13 @@ python -m venv .venv
 # .venv/bin/python -m pip install -e ".[dev]"     # macOS / Linux
 
 python backend/demo/seed_demo.py --force           # build the demo repo
-python backend/main.py --repo demo_repo --diff main...pr3/discount-tier --no-llm
+python backend/main.py --repo backend/demo_repo --diff main...pr3/discount-tier --no-llm
 ```
 
 ## Run the web dashboard
 
 ```bash
-python backend/main.py --repo demo_repo --serve
+python backend/main.py --repo backend/demo_repo --serve
 ```
 
 ## Run tests

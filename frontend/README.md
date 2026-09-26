@@ -1,4 +1,4 @@
-﻿# frontend
+# frontend
 
 Single-file web dashboard for **blastradius** — `index.html`.
 
@@ -10,13 +10,21 @@ The backend HTTP server (`backend/blastradius/web/__init__.py`) reads this
 file and serves it at `GET /`.  The JS inside talks to the backend over
 Server-Sent Events (`/api/analyze`) and JSON (`/api/meta`).
 
+## Backend URL
+
+When the backend serves this page it blanks the `blastradius-api` meta tag, so API
+calls stay same-origin. Opened on its own (as a file, or from any static host), the
+page calls the backend named in that tag, currently the Render deployment at
+`https://blastradius-eqlp.onrender.com`. Append `?api=http://127.0.0.1:8765` to point
+it at a local backend instead.
+
 ## Static export
 
 The backend can also embed the analysis result directly into `index.html` and
 write a fully self-contained file that opens anywhere without a server:
 
 ```bash
-python backend/main.py --repo demo_repo --diff main...pr3/discount-tier \
+python backend/main.py --repo backend/demo_repo --diff main...pr3/discount-tier \
     --no-llm --format html --out report.html
 ```
 

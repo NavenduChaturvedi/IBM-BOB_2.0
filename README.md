@@ -5,7 +5,7 @@
 Give it a git range. It traces every call site the change actually touches, builds a pre-flight checklist specific to *this* diff, and writes a rollback runbook using the real deployment names, migration revisions, and commit SHAs from your repo. IBM Bob improves the runbook, and a validator rejects anything Bob says that isn't grounded in the repo.
 
 ```
-python backend/main.py --repo demo_repo --diff main...pr3/discount-tier
+python backend/main.py --repo backend/demo_repo --diff main...pr3/discount-tier
 ```
 
 ![blastradius on a breaking signature change: the caller tree marks the two test calls that will fail, and Bob's runbook is validated against the repo](docs/pr3.svg)
@@ -20,6 +20,14 @@ The analysis runs in about half a second; Bob adds 10–15 seconds. In a termina
 
 </details>
 
+### Live demo
+
+**https://blastradius-eqlp.onrender.com** runs the dashboard on the three demo PRs (hosted on Render's free plan: the first visit after it has been idle takes about a minute to wake up).
+
+- The backend (`render.yaml`) seeds the demo repo at build time and serves the dashboard and API from one origin.
+- `frontend/index.html` also works on its own, opened as a file or hosted anywhere: its `blastradius-api` meta tag points at the Render backend, which allows cross-origin calls. Override it with `?api=https://your-backend`.
+- Bob mode needs `BOB_API_KEY` set in the Render service's environment. Without it the dashboard offers template runbooks and the rejection demo. The public backend accepts only real branch names and runs one Bob analysis at a time.
+
 ---
 
 ## Quickstart
@@ -31,7 +39,7 @@ python -m venv .venv
 .venv/Scripts/python -m pip install -e "backend/[dev]"   # macOS/Linux: .venv/bin/python
 
 python backend/demo/seed_demo.py --force                  # builds demo_repo/ with 3 example PRs
-python backend/main.py --repo demo_repo --diff main...pr3/discount-tier --no-llm
+python backend/main.py --repo backend/demo_repo --diff main...pr3/discount-tier --no-llm
 ```
 
 ## The three demo PRs
@@ -89,7 +97,7 @@ Markdown report
 - **Every command Bob writes is validated** against the facts scanned from the repo. Unknown deployment or namespace, unknown SHA or revision, a tool with no backing file (`helm` without a chart, `curl` to an invented URL), invented HTTP routes, `<placeholders>`, and dropped critical steps are all rejected. The report then uses the template and lists why:
 
 ```bash
-python backend/main.py --repo demo_repo --diff main...pr3/discount-tier \
+python backend/main.py --repo backend/demo_repo --diff main...pr3/discount-tier \
     --bob-output backend/demo/bob_samples/pr3_hallucinated.md
 ```
 
