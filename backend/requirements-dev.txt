@@ -1,0 +1,8 @@
+﻿# Development / test dependencies
+# Install with:  pip install -r backend/requirements-dev.txt
+#
+# Includes all runtime deps so a single install is enough for development:
+-r requirements.txt
+
+# Test runner
+pytest>=8.0,<10.0

@@ -1,0 +1,11 @@
+﻿# Runtime dependencies for blastradius
+# Install with:  pip install -r backend/requirements.txt
+
+# YAML parsing for k8s manifests and docker-compose files
+PyYAML>=6.0,<7.0
+
+# Rich terminal output (caller tree, severity badges, spinner)
+rich>=13.0,<16.0
+
+# Markdown rendering for Bob runbook output in the web dashboard
+markdown-it-py>=3.0,<5.0
