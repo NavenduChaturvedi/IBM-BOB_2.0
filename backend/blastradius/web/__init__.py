@@ -158,9 +158,12 @@ def _handler(app: Dashboard):
 
 
 def serve(repo: Path, port: int = 8765, open_browser: bool = True) -> int:
+    import os
+    port = int(os.environ.get("PORT", port))
+    host = "0.0.0.0"  # must bind to all interfaces on Render / any cloud host
     app = Dashboard(repo)
-    server = ThreadingHTTPServer(("127.0.0.1", port), _handler(app))
-    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    server = ThreadingHTTPServer((host, port), _handler(app))
+    url = f"http://{host}:{server.server_address[1]}/"
     print(f"blastradius dashboard for {repo} at {url}  (Ctrl+C to stop)", file=sys.stderr)
     if open_browser:
         threading.Timer(0.5, webbrowser.open, args=(url,)).start()
